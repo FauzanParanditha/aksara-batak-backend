@@ -1,0 +1,51 @@
+import { PrismaClient } from "@prisma/client";
+import { Request } from "express";
+
+const prisma = new PrismaClient();
+
+export const createTeam = (data: any) => prisma.team.create({ data });
+export const getAllTeams = async (
+  page = 1,
+  limit = 10,
+  req: Request,
+  search?: string
+) => {
+  const { status } = req.query;
+
+  let where = {};
+
+  if (typeof search === "string" && search != "") {
+    where = {
+      OR: [{ teamName: { contains: search, mode: "insensitive" } }],
+    };
+  }
+
+  const totalCount = await prisma.team.count({
+    where,
+  });
+
+  const teams = await prisma.team.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+
+  return {
+    data: teams,
+    meta: {
+      page,
+      limit,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+export const getTeamById = (leaderId: string) =>
+  prisma.team.findFirst({
+    where: { leaderId },
+    include: { members: true },
+  });
+export const updateTeam = (id: string, data: any) =>
+  prisma.team.update({ where: { id }, data });
+export const deleteTeam = (id: string) => prisma.team.delete({ where: { id } });
