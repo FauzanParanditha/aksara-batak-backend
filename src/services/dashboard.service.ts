@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-export const getDashboardStats = async (userId: string) => {
+export const getDashboardStatsLeader = async (userId: string) => {
   const teams = await prisma.team.findMany({
     where: { leaderId: userId },
     include: {
@@ -20,5 +20,16 @@ export const getDashboardStats = async (userId: string) => {
     totalTeams,
     totalMembers,
     totalPeople,
+  };
+};
+
+export const getDashboardStatsAdmin = async () => {
+  const [totalTeams, totalMember] = await Promise.all([
+    prisma.team.count(),
+    prisma.teamMember.count(),
+  ]);
+  return {
+    totalTeams,
+    totalMember,
   };
 };

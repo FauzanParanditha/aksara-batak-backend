@@ -14,58 +14,66 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  fullName      String
-  email         String   @unique
-  passwordHash  String
-  phone         String?
-  role          String   // 'leader'
+  id                     String    @id @default(cuid())
+  fullName               String
+  email                  String    @unique
+  passwordHash           String
+  phone                  String?
+  role                   String // 'leader'
   emailVerificationToken String?
-  isVerified    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  teams         Team[]
+  isVerified             Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+  teams                  Team[]
 }
 
 model Team {
-  id             String           @id @default(cuid())
+  id             String            @id @default(cuid())
   teamName       String
   category       String
-  leader         User             @relation(fields: [leaderId], references: [id])
+  leader         User              @relation(fields: [leaderId], references: [id])
   leaderId       String
-  status         String           @default("draft")
+  status         String            @default("draft")
   submissionLink String?
   qrCodeUrl      String?
-  createdAt      DateTime         @default(now())
+  paymentStatus  String            @default("unpaid") // 'unpaid', 'pending', 'paid'
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
   members        TeamMember[]
   project        Project?
   presentation   PresentationSlot?
   scores         Score[]
+  payment        Payment?
 }
 
 model TeamMember {
-  id         String   @id @default(cuid())
-  team       Team     @relation(fields: [teamId], references: [id])
-  teamId     String
-  fullName   String
-  email      String
+  id          String   @id @default(cuid())
+  team        Team     @relation(fields: [teamId], references: [id])
+  teamId      String
+  fullName    String
+  email       String
   institution String
-  roleInTeam String
-  cvUrl      String?
-  idCardUrl  String?
-  qrCodeUrl  String?
-  createdAt  DateTime @default(now())
+  roleInTeam  String
+  cvUrl       String?
+  idCardUrl   String?
+  qrCodeUrl   String?
+  createdAt   DateTime @default(now())
+
+  @@unique([teamId, email])
 }
 
 model Project {
-  id             String   @id @default(cuid())
-  team           Team     @relation(fields: [teamId], references: [id])
-  teamId         String   @unique
-  title          String
-  description    String
-  repositoryUrl  String?
-  demoUrl        String?
-  fileUrl        String?
-  submittedAt    DateTime?
+  id            String    @id @default(cuid())
+  team          Team      @relation(fields: [teamId], references: [id])
+  teamId        String    @unique
+  title         String
+  description   String
+  repositoryUrl String?
+  demoUrl       String?
+  fileUrl       String?
+  submittedAt   DateTime?
 }
 
 model PresentationSlot {
@@ -80,30 +88,32 @@ model PresentationSlot {
 }
 
 model Announcement {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   title     String
   content   String
-  target    String   // 'all', 'leader', or team ID
-  createdAt DateTime @default(now())
+  target    String // 'all', 'leader', or team ID
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
 model Judge {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   fullName     String
-  email        String   @unique
+  email        String  @unique
   passwordHash String
   scores       Score[]
 }
 
 model Score {
-  id        String @id @default(cuid())
-  judge     Judge @relation(fields: [judgeId], references: [id])
-  judgeId   String
-  team      Team  @relation(fields: [teamId], references: [id])
-  teamId    String
-  criteria  String
-  score     Float
-  comment   String?
+  id       String  @id @default(cuid())
+  judge    Judge   @relation(fields: [judgeId], references: [id])
+  judgeId  String
+  team     Team    @relation(fields: [teamId], references: [id])
+  teamId   String
+  criteria String
+  score    Float
+  comment  String?
 }
 
 model Email_Log {
@@ -118,6 +128,20 @@ model Email_Log {
   sentAt       DateTime    @default(now())
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+}
+
+model Payment {
+  id         String    @id @default(cuid())
+  team       Team      @relation(fields: [teamId], references: [id])
+  teamId     String    @unique
+  amount     Int
+  method     String // e.g. "midtrans"
+  status     String // 'pending', 'paid', 'expired', 'failed'
+  paymentUrl String? // token Midtrans Snap (client-side)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  paidAt     DateTime?
 }
 
 enum EmailType {

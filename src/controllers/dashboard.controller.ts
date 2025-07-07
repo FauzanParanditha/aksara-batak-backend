@@ -1,36 +1,31 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
-
-const prisma = new PrismaClient();
+import {
+  getDashboardStatsAdmin,
+  getDashboardStatsLeader,
+} from "../services/dashboard.service";
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      throw new Error("User id not found");
+    }
 
-    // Ambil semua tim yang dibuat oleh user
-    const teams = await prisma.team.findMany({
-      where: { leaderId: userId },
-      include: {
-        members: true,
-      },
-    });
+    const stat = await getDashboardStatsLeader(userId);
 
-    const totalTeams = teams.length;
-    const totalMembers = teams.reduce(
-      (sum, team) => sum + team.members.length,
-      0
-    );
-    const totalPeople = totalTeams + totalMembers; // 1 leader per tim
-
-    res.json({
-      totalTeams,
-      totalMembers,
-      totalPeople,
-    });
+    res.json(stat);
     return;
   } catch (error) {
     console.error("Error in getDashboardStats:", error);
     res.status(500).json({ message: "Internal Server Error" });
     return;
   }
+};
+
+export const getStatsAdmin = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const stats = await getDashboardStatsAdmin();
+  res.json(stats);
 };

@@ -8,6 +8,8 @@ import { requestLogger } from "./utils/logger";
 
 import authRoutes from "./routes/auth.route";
 import dashboardRoutes from "./routes/dashboard.route";
+import emailLogRoutes from "./routes/email-log.routes";
+import paylabsRoutes from "./routes/paylabs.route";
 import teamRoutes from "./routes/team.route";
 import teamMemberRoutes from "./routes/teamMember.route";
 
@@ -31,6 +33,8 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/teams", teamRoutes);
 app.use("/api/v1/team-members", teamMemberRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/paylabs", paylabsRoutes);
+app.use("/api/v1/email-logs", emailLogRoutes);
 
 // Contoh route test
 app.get("/", (req, res) => {

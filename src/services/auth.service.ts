@@ -37,6 +37,10 @@ export const loginLeader = async (data: any) => {
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) throw new Error("Invalid credentials");
 
+  if (!user.isVerified) {
+    throw new Error("Account not verified");
+  }
+
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET!,

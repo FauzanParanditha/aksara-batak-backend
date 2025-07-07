@@ -3,7 +3,57 @@ import { Request } from "express";
 
 const prisma = new PrismaClient();
 
-export const createTeam = (data: any) => prisma.team.create({ data });
+export const createTeam = async (data: {
+  teamName: string;
+  category: string;
+  leaderId: string;
+  institution: string;
+}) => {
+  const user = await prisma.user.findUnique({
+    where: { id: data.leaderId },
+  });
+
+  if (!user) throw new Error("Leader not found");
+
+  const alreadyMember = await prisma.teamMember.findFirst({
+    where: {
+      email: user.email,
+    },
+  });
+
+  if (alreadyMember) {
+    throw new Error("User already registered as a team member");
+  }
+
+  const amount = 200000;
+
+  return prisma.team.create({
+    data: {
+      teamName: data.teamName,
+      category: data.category,
+      leaderId: data.leaderId,
+      members: {
+        create: {
+          fullName: user.fullName,
+          email: user.email,
+          institution: data.institution, // atau minta input tambahan di frontend
+          roleInTeam: "Leader",
+        },
+      },
+      payment: {
+        create: {
+          amount,
+          method: "paylabs", // atau tentukan dinamis
+          status: "unpaid",
+        },
+      },
+    },
+    include: {
+      payment: true, // opsional: agar langsung terlihat hasilnya
+    },
+  });
+};
+
 export const getAllTeams = async (
   page = 1,
   limit = 10,
@@ -46,6 +96,8 @@ export const getTeamById = (leaderId: string) =>
     where: { leaderId },
     include: { members: true },
   });
+export const getTeamByIdAdmin = (id: string) =>
+  prisma.team.findUnique({ where: { id } });
 export const updateTeam = (id: string, data: any) =>
   prisma.team.update({ where: { id }, data });
 export const deleteTeam = (id: string) => prisma.team.delete({ where: { id } });

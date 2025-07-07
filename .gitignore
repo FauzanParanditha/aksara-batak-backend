@@ -140,3 +140,7 @@ dist
 /src/generated/prisma
 
 /src/generated/prisma
+
+# key
+private-key.pem
+public-key.pem
