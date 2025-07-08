@@ -123,24 +123,62 @@ export const verifyManualPayment = async ({
   paymentId,
   status,
   notes,
+  adminId,
 }: {
   paymentId: string;
   status: "paid" | "rejected";
   notes?: string;
+  adminId: string; // 🧑‍💼 dari req.user.id
 }) => {
-  const data: any = {
-    status,
-    notes,
-  };
-  if (status === "paid") {
-    data.paidAt = new Date();
-  }
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: paymentId },
+      include: { team: true },
+    });
 
-  return prisma.payment.update({
-    where: { id: paymentId },
-    data,
+    if (!payment) throw new Error("Payment not found");
+
+    const updates: any = {
+      status,
+      notes,
+    };
+
+    if (status === "paid") {
+      updates.paidAt = new Date();
+
+      const latest = await tx.team.findFirst({
+        where: { queueNumber: { not: null } },
+        orderBy: { queueNumber: "desc" },
+      });
+
+      const nextQueue = latest?.queueNumber ? latest.queueNumber + 1 : 1;
+
+      await tx.team.update({
+        where: { id: payment.teamId },
+        data: {
+          queueNumber: nextQueue,
+          status: "paid",
+        },
+      });
+    }
+
+    // Simpan log verifikasi
+    await tx.paymentVerificationLog.create({
+      data: {
+        paymentId: payment.id,
+        verifiedById: adminId,
+        status,
+        notes,
+      },
+    });
+
+    return tx.payment.update({
+      where: { id: paymentId },
+      data: updates,
+    });
   });
 };
+
 
 export const getManualPaymentsToVerify = () => {
   return prisma.payment.findMany({

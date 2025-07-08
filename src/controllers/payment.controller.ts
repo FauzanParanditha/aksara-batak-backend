@@ -90,6 +90,7 @@ export const getPayments = async (req: Request, res: Response) => {
 export const verifyManual = async (req: Request, res: Response) => {
   try {
     const { paymentId } = req.params;
+    const adminId = req.user?.id as string
     const parseResult = VerifyPaymentSchema.safeParse(req.body);
 
     if (!parseResult.success) {
@@ -106,6 +107,7 @@ export const verifyManual = async (req: Request, res: Response) => {
       paymentId,
       status,
       notes,
+      adminId
     });
 
     res.json(payment);
