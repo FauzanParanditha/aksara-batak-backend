@@ -43,8 +43,8 @@ export const createTeam = async (data: {
       payment: {
         create: {
           amount,
-          method: "paylabs", // atau tentukan dinamis
-          status: "unpaid",
+          method: "manual", // atau tentukan dinamis
+          status: "waiting_verification",
         },
       },
     },

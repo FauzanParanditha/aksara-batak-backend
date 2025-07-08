@@ -131,17 +131,19 @@ model Email_Log {
 }
 
 model Payment {
-  id         String    @id @default(cuid())
-  team       Team      @relation(fields: [teamId], references: [id])
-  teamId     String    @unique
-  amount     Int
-  method     String // e.g. "midtrans"
-  status     String // 'pending', 'paid', 'expired', 'failed'
-  paymentUrl String? // token Midtrans Snap (client-side)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-  paidAt     DateTime?
+  id              String    @id @default(cuid())
+  team            Team      @relation(fields: [teamId], references: [id])
+  teamId          String    @unique
+  amount          Int
+  method          String    // "manual" | "midtrans"
+  status          PaymentStatus
+  paymentUrl      String?   // hanya untuk Midtrans Snap (jika method = midtrans)
+  manualProofUrl  String?   // hanya untuk manual transfer
+  notes           String?   // catatan verifikasi oleh admin
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 }
 
 enum EmailType {
@@ -157,4 +159,14 @@ enum EmailStatus {
   success
   failed
   pending
+}
+
+enum PaymentStatus {
+  unpaid              // belum mulai bayar
+  pending             // sudah request Snap tapi belum dibayar (midtrans)
+  waiting_verification // sudah upload bukti tapi belum diverifikasi (manual)
+  paid                // sudah diverifikasi atau sukses
+  failed              // midtrans gagal
+  expired             // midtrans kadaluarsa
+  rejected            // bukti manual ditolak admin
 }
