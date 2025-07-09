@@ -1,6 +1,48 @@
 import { PrismaClient } from "@prisma/client";
+import { Request } from "express";
 
 const prisma = new PrismaClient();
+
+export const getAllMembers = async (
+  page = 1,
+  limit = 10,
+  req: Request,
+  search?: string
+) => {
+  const { status } = req.query;
+
+  let where = {};
+
+  if (typeof search === "string" && search != "") {
+    where = {
+      OR: [
+        { fullName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const totalCount = await prisma.teamMember.count({
+    where,
+  });
+
+  const teamMembers = await prisma.teamMember.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+
+  return {
+    data: teamMembers,
+    meta: {
+      page,
+      limit,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
 
 export const getTeamMembers = async (teamId: string) => {
   return prisma.teamMember.findMany({ where: { teamId } });

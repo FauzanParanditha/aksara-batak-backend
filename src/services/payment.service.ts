@@ -158,6 +158,7 @@ export const verifyManualPayment = async ({
         data: {
           queueNumber: nextQueue,
           status: "paid",
+          paymentStatus: "paid",
         },
       });
     }
@@ -178,7 +179,6 @@ export const verifyManualPayment = async ({
     });
   });
 };
-
 
 export const getManualPaymentsToVerify = () => {
   return prisma.payment.findMany({

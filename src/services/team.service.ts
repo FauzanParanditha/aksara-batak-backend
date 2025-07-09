@@ -9,6 +9,14 @@ export const createTeam = async (data: {
   leaderId: string;
   institution: string;
 }) => {
+  const existingTeam = await prisma.team.findFirst({
+    where: { teamName: data.teamName },
+  });
+
+  if (existingTeam) {
+    throw new Error("Team name already exists");
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: data.leaderId },
   });
@@ -36,7 +44,7 @@ export const createTeam = async (data: {
         create: {
           fullName: user.fullName,
           email: user.email,
-          institution: data.institution, // atau minta input tambahan di frontend
+          institution: data.institution,
           roleInTeam: "Leader",
         },
       },

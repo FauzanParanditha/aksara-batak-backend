@@ -5,6 +5,16 @@ import {
   updateMemberSchema,
 } from "../validators/teamMember.validator";
 
+export const getAll = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const search = (req.query.search as string) || undefined;
+
+  const members = await service.getAllMembers(page, limit, req, search);
+  res.json(members);
+  return;
+};
+
 export const getMembers = async (req: Request, res: Response) => {
   const teamId = req.params.teamId;
   const members = await service.getTeamMembers(teamId);

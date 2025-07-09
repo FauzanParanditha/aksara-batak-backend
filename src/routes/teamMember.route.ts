@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   addMember,
   deleteMember,
+  getAll,
   getMembers,
   updateMember,
 } from "../controllers/teamMember.controller";
@@ -12,6 +13,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get("/", authorizeRole(["admin"]), getAll);
 router.get("/:teamId", authorizeRole(["admin", "leader"]), getMembers);
 router.post("/", authorizeRole(["admin", "leader"]), addMember);
 router.put("/:id", authorizeRole(["admin", "leader"]), updateMember);

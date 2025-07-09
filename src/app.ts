@@ -15,6 +15,7 @@ import paymentRoutes from "./routes/payment.route";
 import verifiedLogRoutes from "./routes/paymentVerified-log.routes";
 import teamRoutes from "./routes/team.route";
 import teamMemberRoutes from "./routes/teamMember.route";
+import userRoutes from "./routes/user.route";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 //route
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/teams", teamRoutes);
+app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/team-members", teamMemberRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/paylabs", paylabsRoutes);
