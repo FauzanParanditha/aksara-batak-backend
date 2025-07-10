@@ -56,7 +56,29 @@ export const getAllUsers = async (
   };
 };
 export const getUserById = (id: string) =>
-  prisma.user.findUnique({ where: { id } });
+  prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: true,
+      emailVerificationToken: true,
+      isVerified: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
+    },
+  });
+export const getUserPassword = (id: string) =>
+  prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      passwordHash: true,
+    },
+  });
 export const updateUser = (id: string, data: any) =>
   prisma.user.update({ where: { id }, data });
 export const deleteUser = (id: string) => prisma.user.delete({ where: { id } });

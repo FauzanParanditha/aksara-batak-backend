@@ -1,6 +1,8 @@
+import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import * as service from "../services/user.service";
 import {
+  changePasswordSchema,
   createUserSchema,
   updateUserSchema,
 } from "../validators/user.validator";
@@ -50,4 +52,46 @@ export const remove = async (req: Request, res: Response): Promise<void> => {
   }
   await service.deleteUser(req.params.id);
   res.status(204).send();
+};
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  const user = await service.getUserById(userId);
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+  res.json(user);
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  const user = await service.getUserPassword(userId);
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  const match = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!match) {
+    res.status(400).json({ message: "Current password is incorrect" });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await service.updateUser(userId, { passwordHash: newHash });
+
+  res.json({ message: "Password changed successfully" });
+  return;
 };

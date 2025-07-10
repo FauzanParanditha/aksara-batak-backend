@@ -16,3 +16,14 @@ export const updateUserSchema = z.object({
   phone: z.string().min(2),
   role: z.string().min(2),
 });
+
+export const updateProfileSchema = z.object({
+  fullName: z.string().min(3),
+  email: z.string().email(),
+  phone: z.string().min(2),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(6),
+  newPassword: z.string().min(6),
+});
