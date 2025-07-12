@@ -7,6 +7,7 @@ import { errorHandler } from "./middlewares/error.middleware";
 import { requestLogger } from "./utils/logger";
 import { multerErrorHandler } from "./utils/multerError";
 
+import announcementRoutes from "./routes/announcement.route";
 import authRoutes from "./routes/auth.route";
 import dashboardRoutes from "./routes/dashboard.route";
 import emailLogRoutes from "./routes/email-log.routes";
@@ -43,6 +44,7 @@ app.use("/api/v1/paylabs", paylabsRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/email-logs", emailLogRoutes);
 app.use("/api/v1/verified-logs", verifiedLogRoutes);
+app.use("/api/v1/announcements", announcementRoutes);
 
 // Contoh route test
 app.get("/", (req, res) => {

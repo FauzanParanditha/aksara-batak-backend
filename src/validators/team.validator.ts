@@ -9,5 +9,4 @@ export const createTeamSchema = z.object({
 export const updateTeamSchema = z.object({
   teamName: z.string().min(6).optional(),
   category: z.string().min(2).optional(),
-  institution: z.string().min(2),
 });

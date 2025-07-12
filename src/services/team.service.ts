@@ -74,7 +74,10 @@ export const getAllTeams = async (
 
   if (typeof search === "string" && search != "") {
     where = {
-      OR: [{ teamName: { contains: search, mode: "insensitive" } }],
+      OR: [
+        { teamName: { contains: search, mode: "insensitive" } },
+        { id: { contains: search, mode: "insensitive" } },
+      ],
     };
   }
 

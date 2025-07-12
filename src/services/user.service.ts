@@ -18,6 +18,7 @@ export const getAllUsers = async (
 
   if (typeof search === "string" && search != "") {
     where.OR = [
+      { id: { contains: search, mode: "insensitive" } },
       { fullName: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
     ];
