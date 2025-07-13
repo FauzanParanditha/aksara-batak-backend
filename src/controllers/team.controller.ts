@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as service from "../services/team.service";
+import { ManualProofSchema } from "../validators/payment.validator";
 import {
   createTeamSchema,
   updateTeamSchema,
@@ -92,5 +93,43 @@ export const deleteTeam = async (req: Request, res: Response) => {
     }
     await service.deleteTeam(req.params.id);
     res.status(204).send();
+  }
+};
+export const uploadSubmission = async (req: Request, res: Response) => {
+  const parseResult = ManualProofSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: "Validation error",
+      issues: parseResult.error.flatten(),
+    });
+    return;
+  }
+
+  const { teamId } = parseResult.data;
+  const leaderId = req.user!.id;
+  const isExsit = await service.getTeamById(leaderId);
+  if (!isExsit) {
+    res.status(404).json({ message: "Team not found" });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ message: "No file uploaded" });
+    return;
+  }
+
+  const relativePath = `/uploads/submissions/${req.file.filename}`;
+
+  try {
+    const updated = await service.updateSubmissionLink({
+      teamId,
+      filePath: relativePath,
+    });
+    res.status(201).json(updated);
+    return;
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update submission" });
+    return;
   }
 };

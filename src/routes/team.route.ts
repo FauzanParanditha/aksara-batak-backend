@@ -5,9 +5,11 @@ import {
   getMyTeam,
   getTeamById,
   updateTeam,
+  uploadSubmission,
 } from "../controllers/team.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { authorizeRole } from "../middlewares/role.middleware";
+import { submissionUpload } from "../middlewares/submission.middleware copy";
 
 const router = Router();
 
@@ -17,5 +19,12 @@ router.get("/:id", authorizeRole(["admin", "leader"]), getTeamById);
 router.post("/", authorizeRole(["admin", "leader"]), createTeam);
 router.put("/:id", authorizeRole(["admin", "leader"]), updateTeam);
 router.delete("/:id", authorizeRole(["admin", "leader"]), deleteTeam);
+
+router.post(
+  "/submission",
+  authorizeRole(["leader"]),
+  submissionUpload.single("proof"),
+  uploadSubmission
+);
 
 export default router;

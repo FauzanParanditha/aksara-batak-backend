@@ -112,3 +112,15 @@ export const getTeamByIdAdmin = (id: string) =>
 export const updateTeam = (id: string, data: any) =>
   prisma.team.update({ where: { id }, data });
 export const deleteTeam = (id: string) => prisma.team.delete({ where: { id } });
+export const updateSubmissionLink = ({
+  teamId,
+  filePath,
+}: {
+  teamId: string;
+  filePath: string;
+}) => {
+  return prisma.team.update({
+    where: { id: teamId },
+    data: { submissionLink: filePath },
+  });
+};
