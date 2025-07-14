@@ -9,3 +9,12 @@ export const deleteLocalFile = (photoUrl: string) => {
   );
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 };
+
+export const deleteLocalFileTeam = (photoUrl: string) => {
+  const filePath = path.join(
+    __dirname,
+    "../../uploads/payments",
+    path.basename(photoUrl)
+  );
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+};

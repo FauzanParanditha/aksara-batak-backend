@@ -5,7 +5,7 @@ import path from "path";
 // Buat storage engine
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "../../uploads/submissions");
+    const uploadPath = path.join(__dirname, "../../uploads/teams");
     fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
@@ -16,20 +16,14 @@ const storage = multer.diskStorage({
   },
 });
 
-export const submissionUpload = multer({
+export const teamUpload = multer({
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024,
+    fileSize: 2 * 1024 * 1024,
   },
   fileFilter: (_, file, cb) => {
-    const allowedTypes = [
-      "application/pdf",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ];
-
-    if (!allowedTypes.includes(file.mimetype)) {
-      console.warn(`Rejected file type: ${file.mimetype}`);
+    if (!file.mimetype.startsWith("image/")) {
+      console.warn("Rejected non-image file");
       return cb(null, false);
     }
     cb(null, true);

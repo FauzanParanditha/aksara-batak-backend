@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as service from "../services/team.service";
+import { deleteLocalFileTeam } from "../utils/helper";
 import { ManualProofSchema } from "../validators/payment.validator";
 import {
   createTeamSchema,
@@ -36,11 +37,19 @@ export const createTeam = async (req: Request, res: Response) => {
     return;
   }
 
+  if (!req.file) {
+    res.status(400).json({ error: "Photo teams file is required" });
+    return;
+  }
+
+  const photoUrl = `/uploads/teams/${req.file.filename}`;
+
   const team = await service.createTeam({
     teamName: data.teamName,
     category: data.category,
     leaderId,
-    institution: data.institution, // dari input frontend
+    institution: data.institution,
+    photoUrl,
   });
   res.status(201).json(team);
 };
@@ -56,8 +65,18 @@ export const updateTeam = async (req: Request, res: Response) => {
       return;
     }
 
+    if (req.file && team.photoUrl) {
+      deleteLocalFileTeam(team.photoUrl);
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "Photo team file is required" });
+      return;
+    }
+    const photoUrl = `/uploads/teams/${req.file.filename}`;
     const updated = await service.updateTeam(req.params.id, {
       ...data,
+      photoUrl,
     });
     res.json(updated);
   } else {
@@ -67,8 +86,19 @@ export const updateTeam = async (req: Request, res: Response) => {
       return;
     }
 
+    if (req.file && team.photoUrl) {
+      deleteLocalFileTeam(team.photoUrl);
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "Photo team file is required" });
+      return;
+    }
+    const photoUrl = `/uploads/teams/${req.file.filename}`;
+
     const updated = await service.updateTeam(req.params.id, {
       ...data,
+      photoUrl,
     });
     res.json(updated);
   }

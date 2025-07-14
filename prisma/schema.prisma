@@ -39,6 +39,7 @@ model Team {
   submissionLink String?
   qrCodeUrl      String?
   queueNumber    Int?
+  photoUrl      String?
   paymentStatus  String            @default("unpaid") // 'unpaid', 'pending', 'paid'
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
