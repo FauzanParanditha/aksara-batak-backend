@@ -60,6 +60,8 @@ model TeamMember {
   email       String
   institution String
   roleInTeam  String
+  address     String?
+  phone       String?
   cvUrl       String?
   idCardUrl   String?
   qrCodeUrl   String?

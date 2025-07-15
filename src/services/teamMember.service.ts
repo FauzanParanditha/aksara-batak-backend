@@ -73,6 +73,8 @@ export const createTeamMember = async (data: {
   email: string;
   institution: string;
   roleInTeam: string;
+  phone?: string;
+  address?: string;
 }) => {
   return prisma.teamMember.create({ data });
 };
