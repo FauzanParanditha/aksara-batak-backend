@@ -39,18 +39,18 @@ export const sendVerificationEmail = async (
   const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify?token=${token}`;
 
   const body = `<p>Halo ${name},</p>
-    <p>Terima kasih telah mendaftar. Untuk menyelesaikan proses pendaftaran, silakan klik tombol di bawah ini untuk memverifikasi akun Anda:</p>
-    <p style="text-align: center; margin: 24px 0;">
-      <a href="${verificationUrl}" 
-         style="background-color: #4f46e5; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
-         target="_blank">
-        Verifikasi Akun
-      </a>
-    </p>
-    <p>Atau salin dan buka tautan ini di browser Anda:</p>
-    <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-    <p>Jika Anda tidak merasa mendaftar, abaikan email ini.</p>
-    <p>Salam,<br/>Tim Panitia</p>`;
+  <p>Thank you for registering. To complete your registration, please click the button below to verify your account:</p>
+  <p style="text-align: center; margin: 24px 0;">
+    <a href="${verificationUrl}" 
+      style="background-color: #4f46e5; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
+      target="_blank">
+      Verify Account
+    </a>
+  </p>
+  <p>Or copy and open this link in your browser:</p>
+  <p><a href="${verificationUrl}">${verificationUrl}</a></p>
+  <p>If you did not register, you can safely ignore this email.</p>
+  <p>Regards,<br/>The Committee Team</p>`;
 
   try {
     await transporter.sendMail({
@@ -118,4 +118,52 @@ export async function sendMail(to: string, subject: string, html: string) {
     subject,
     html,
   });
+}
+
+export async function sendResetEmail(name: string, to: string, token: string) {
+  const resetLink = `${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
+
+  const body = `<p>Halo ${name},</p>
+  <p>You recently requested to reset your password. Click the button below to set a new password:</p>
+  <p style="text-align: center; margin: 24px 0;">
+    <a href="${resetLink}" 
+      style="background-color: #4f46e5; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
+      target="_blank">
+      Reset Password
+    </a>
+  </p>
+  <p>Or copy and open this link in your browser:</p>
+  <p><a href="${resetLink}">${resetLink}</a></p>
+  <p>This link will expire in 1 hour for your security.</p>
+  <p>If you did not request a password reset, you can safely ignore this email.</p>
+  <p>Regards,<br/>The Committee Team</p>`;
+
+  try {
+    await transporter.sendMail({
+      from: `"No Reply" <${process.env.SMTP_EMAIL}>`,
+      to,
+      subject: "Reset Password",
+      html: body,
+    });
+    await logEmail(
+      to,
+      "Reset Password",
+      EmailType.resetPassword,
+      EmailStatus.success,
+      undefined,
+      `<p>Click the link below to reset your password:</p>
+       <a href="${resetLink}">${resetLink}</a>
+       <p>This link will expire in 1 hour.</p>`
+    );
+  } catch (error) {
+    await logEmail(
+      to,
+      "Reset Password",
+      EmailType.resetPassword,
+      EmailStatus.failed,
+      undefined,
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
 }

@@ -1,5 +1,10 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+
+export function generateToken(length: number = 32): string {
+  return crypto.randomBytes(length).toString("hex");
+}
 
 export const deleteLocalFile = (photoUrl: string) => {
   const filePath = path.join(

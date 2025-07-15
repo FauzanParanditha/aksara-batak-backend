@@ -34,7 +34,6 @@ export const registerSchema = z
     path: ["confirmPassword"], // Lokasi error diarahkan ke field `confirmPassword`
   });
 
-// Skema Login (Dengan Validasi Kuat)
 export const loginSchema = z.object({
   email: z
     .string()
@@ -45,3 +44,30 @@ export const loginSchema = z.object({
     .min(8, "Password minimal 8 karakter")
     .max(100, "Password terlalu panjang"),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .email("Format email tidak valid")
+    .max(100, "Email terlalu panjang"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().length(64, "Token harus terdiri dari 64 karakter"),
+
+    newPassword: z
+      .string()
+      .min(8, "Password baru minimal 8 karakter")
+      .max(100, "Password terlalu panjang")
+      .regex(/[a-z]/, "Harus mengandung huruf kecil")
+      .regex(/[A-Z]/, "Harus mengandung huruf besar")
+      .regex(/[0-9]/, "Harus mengandung angka")
+      .regex(/[^a-zA-Z0-9]/, "Harus mengandung simbol"),
+
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Konfirmasi password tidak cocok",
+    path: ["confirmPassword"],
+  });

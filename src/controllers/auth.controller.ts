@@ -1,7 +1,17 @@
 import { Request, Response } from "express";
-import { loginLeader, registerLeader } from "../services/auth.service";
+import {
+  forgotPasswordService,
+  loginLeader,
+  registerLeader,
+  resetPasswordService,
+} from "../services/auth.service";
 import { verifyEmailService } from "../services/verify.service";
-import { loginSchema, registerSchema } from "../validators/auth.validator";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "../validators/auth.validator";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -32,6 +42,25 @@ export const verifyEmail = async (req: Request, res: Response) => {
     return;
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
+    return;
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const parsed = forgotPasswordSchema.parse(req.body);
+  await forgotPasswordService(parsed.email);
+  res.json({ message: "If that email exists, a reset link has been sent." });
+  return;
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const parsed = resetPasswordSchema.parse(req.body);
+  try {
+    await resetPasswordService(parsed.token, parsed.newPassword);
+    res.json({ message: "Password has been reset." });
+    return;
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
     return;
   }
 };

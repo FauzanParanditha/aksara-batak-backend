@@ -1,7 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { sendVerificationEmail } from "../utils/mailer";
+import { generateToken } from "../utils/helper";
+import { sendResetEmail, sendVerificationEmail } from "../utils/mailer";
 const prisma = new PrismaClient();
 
 export const registerLeader = async (data: any) => {
@@ -49,4 +50,47 @@ export const loginLeader = async (data: any) => {
   const { passwordHash, ...safeUser } = user;
 
   return { user: safeUser, token };
+};
+
+export const forgotPasswordService = async (email: string) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return;
+
+  const token = generateToken();
+  const expiredAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
+
+  await prisma.user.update({
+    where: { email },
+    data: {
+      emailVerificationToken: token,
+      passwordResetTokenExp: expiredAt,
+    },
+  });
+
+  await sendResetEmail(user.fullName, email, token);
+};
+
+export const resetPasswordService = async (
+  token: string,
+  newPassword: string
+) => {
+  const user = await prisma.user.findFirst({
+    where: {
+      emailVerificationToken: token,
+      passwordResetTokenExp: { gt: new Date() },
+    },
+  });
+
+  if (!user) throw new Error("Token not valid or expired");
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: hashedPassword,
+      emailVerificationToken: null,
+      passwordResetTokenExp: null,
+    },
+  });
 };

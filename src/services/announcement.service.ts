@@ -36,7 +36,13 @@ export async function createAnnouncementAndNotify({
   }
 
   for (const user of recipients) {
-    const html = `<p>Halo ${user.fullName},</p><p>${content}</p><p>Thank you.<br>Panitia</p>`;
+    const html = `<div style="font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 1.6;">
+    <p>Hello ${user.fullName},</p>
+
+    <p>${content}</p>
+
+    <p>Thank you.<br/>The Committee Team</p>
+  </div>`;
 
     try {
       await sendMail(user.email, title, html);
