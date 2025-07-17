@@ -85,10 +85,21 @@ export const updateMember = async (req: Request, res: Response) => {
 
 export const deleteMember = async (req: Request, res: Response) => {
   const memberId = req.params.id;
-  const leaderId = req.user!.id;
+  const user = req.user!;
 
   const member = await service.getMemberWithTeam(memberId);
-  if (!member || member.team.leaderId !== leaderId) {
+  if (!member) {
+    res.status(404).json({ error: "Member not found" });
+    return;
+  }
+
+  const isAdmin = user.role === "admin";
+  const isLeader = user.role === "leader";
+
+  const isAuthorized =
+    isAdmin || (isLeader && member.team.leaderId === user.id);
+
+  if (!isAuthorized) {
     res.status(403).json({ error: "Unauthorized" });
     return;
   }
