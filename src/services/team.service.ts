@@ -34,7 +34,7 @@ export const createTeam = async (data: {
     throw new Error("User already registered as a team member");
   }
 
-  const amount = 200000;
+  const amount = 100000;
 
   return prisma.team.create({
     data: {
