@@ -25,7 +25,7 @@ async function main() {
     console.log(`✅ Admin user created: ${email}`);
   }
 
-  const codes = Array.from({ length: 1000 }, (_, i) => i); // 0–999
+  const codes = Array.from({ length: 900 }, (_, i) => i + 100);
 
   for (const code of codes) {
     await prisma.uniqueCodePool.upsert({
