@@ -166,6 +166,7 @@ model Payment {
   team             Team                     @relation(fields: [teamId], references: [id])
   teamId           String                   @unique
   amount           Int
+  uniqueCode       Int?
   method           String // "manual" | "midtrans"
   status           PaymentStatus
   paymentUrl       String?
