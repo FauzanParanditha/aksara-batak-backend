@@ -3,6 +3,34 @@ import { Request } from "express";
 
 const prisma = new PrismaClient();
 
+export const generateUniqueAmount = async (
+  baseAmount: number,
+  teamId: string
+): Promise<{ amount: number; uniqueCode: number }> => {
+  const poolCode = await prisma.uniqueCodePool.findFirst({
+    where: { isUsed: false },
+    orderBy: { code: "asc" }, // atau random jika perlu
+  });
+
+  if (!poolCode) {
+    throw new Error("All unique codes have been used");
+  }
+
+  await prisma.uniqueCodePool.update({
+    where: { code: poolCode.code },
+    data: {
+      isUsed: true,
+      usedAt: new Date(),
+      teamId,
+    },
+  });
+
+  return {
+    amount: baseAmount + poolCode.code,
+    uniqueCode: poolCode.code,
+  };
+};
+
 export const createTeam = async (data: {
   teamName: string;
   category: string;
@@ -34,9 +62,7 @@ export const createTeam = async (data: {
     throw new Error("User already registered as a team member");
   }
 
-  const amount = 100000;
-
-  return prisma.team.create({
+  const createdTeam = await prisma.team.create({
     data: {
       teamName: data.teamName,
       category: data.category,
@@ -50,18 +76,33 @@ export const createTeam = async (data: {
           roleInTeam: "Leader",
         },
       },
+    },
+  });
+
+  const baseAmount = 100000;
+  const { amount, uniqueCode } = await generateUniqueAmount(
+    baseAmount,
+    createdTeam.id
+  );
+
+  const updatedTeam = await prisma.team.update({
+    where: { id: createdTeam.id },
+    data: {
       payment: {
         create: {
           amount,
-          method: "manual", // atau tentukan dinamis
+          uniqueCode,
+          method: "manual",
           status: "waiting_verification",
         },
       },
     },
     include: {
-      payment: true, // opsional: agar langsung terlihat hasilnya
+      payment: true,
     },
   });
+
+  return updatedTeam;
 };
 
 export const getAllTeams = async (
@@ -113,7 +154,18 @@ export const getTeamByIdAdmin = (id: string) =>
   prisma.team.findUnique({ where: { id } });
 export const updateTeam = (id: string, data: any) =>
   prisma.team.update({ where: { id }, data });
-export const deleteTeam = (id: string) => prisma.team.delete({ where: { id } });
+export const deleteTeam = async (id: string) => {
+  await prisma.team.delete({ where: { id } });
+
+  await prisma.uniqueCodePool.updateMany({
+    where: { teamId: id },
+    data: {
+      isUsed: false,
+      usedAt: null,
+      teamId: null,
+    },
+  });
+};
 export const updateSubmissionLink = ({
   teamId,
   filePath,

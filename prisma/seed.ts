@@ -9,24 +9,39 @@ async function main() {
 
   if (existing) {
     console.log(`Admin user already exists: ${email}`);
-    return;
+  } else {
+    const hashedPassword = await bcrypt.hash("Pandi@123#", 10);
+
+    await prisma.user.create({
+      data: {
+        fullName: "Super Admin",
+        email,
+        passwordHash: hashedPassword,
+        role: "admin",
+        isVerified: false,
+      },
+    });
+
+    console.log(`✅ Admin user created: ${email}`);
   }
 
-  const hashedPassword = await bcrypt.hash("Pandi@123#", 10);
+  const codes = Array.from({ length: 1000 }, (_, i) => i); // 0–999
 
-  await prisma.user.create({
-    data: {
-      fullName: "Super Admin",
-      email,
-      passwordHash: hashedPassword,
-      role: "admin",
-      isVerified: false,
-    },
-  });
+  for (const code of codes) {
+    await prisma.uniqueCodePool.upsert({
+      where: { code },
+      update: {},
+      create: { code },
+    });
+  }
 
-  console.log(`✅ Admin user created: ${email}`);
+  console.log("✅ Unique code pool seeded.");
 }
 
 main()
-  .catch((e) => console.error(e))
-  .finally(() => prisma.$disconnect());
+  .catch((e) => {
+    console.error("❌ Error in seeding:", e);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

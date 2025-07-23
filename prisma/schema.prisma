@@ -40,7 +40,7 @@ model Team {
   submissionLink String?
   qrCodeUrl      String?
   queueNumber    Int?
-  photoUrl      String?
+  photoUrl       String?
   paymentStatus  String            @default("unpaid") // 'unpaid', 'pending', 'paid'
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
@@ -50,6 +50,7 @@ model Team {
   presentation   PresentationSlot?
   scores         Score[]
   payment        Payment?
+  UniqueCodePool UniqueCodePool[]
 }
 
 model TeamMember {
@@ -141,6 +142,7 @@ model Payment {
   team           Team          @relation(fields: [teamId], references: [id])
   teamId         String        @unique
   amount         Int
+  uniqueCode     Int
   method         String // "manual" | "midtrans"
   status         PaymentStatus
   paymentUrl     String? // hanya untuk Midtrans Snap (jika method = midtrans)
@@ -165,6 +167,16 @@ model PaymentVerificationLog {
   status     PaymentStatus
   notes      String?
   verifiedAt DateTime      @default(now())
+}
+
+model UniqueCodePool {
+  id        Int       @id @default(autoincrement())
+  code      Int       @unique
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  teamId    String?  @unique
+  createdAt DateTime  @default(now())
 }
 
 enum EmailType {
