@@ -23,6 +23,21 @@ export const getDashboardStatsLeader = async (userId: string) => {
   };
 };
 
+export const getDashboardStatsJudge = async () => {
+  const totalSubmissions = await prisma.team.count({
+    where: {
+      submissionLink: {
+        not: null, 
+        notIn: ["", " "], 
+      },
+    },
+  });
+
+  return {
+    totalSubmissions,
+  };
+};
+
 export const getDashboardStatsAdmin = async () => {
   const [
     totalTeams,

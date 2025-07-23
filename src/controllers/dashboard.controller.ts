@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   getDashboardStatsAdmin,
+  getDashboardStatsJudge,
   getDashboardStatsLeader,
 } from "../services/dashboard.service";
 
@@ -21,6 +22,11 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     return;
   }
 };
+
+export const getStatJudge = async (req: Request, res: Response): Promise<void> => {
+  const stats = await getDashboardStatsJudge();
+  res.json(stats)
+}
 
 export const getStatsAdmin = async (
   req: Request,
