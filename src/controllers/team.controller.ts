@@ -113,7 +113,7 @@ export const deleteTeam = async (req: Request, res: Response) => {
       return;
     }
 
-    await service.deleteTeam(req.params.id);
+    await service.deleteTeamPermanently(req.params.id);
     res.status(204).send();
   } else {
     const team = await service.getTeamById(req.user!.id);
@@ -121,7 +121,7 @@ export const deleteTeam = async (req: Request, res: Response) => {
       res.status(404).json({ message: "Team not found" });
       return;
     }
-    await service.deleteTeam(req.params.id);
+    await service.deleteTeamPermanently(req.params.id);
     res.status(204).send();
   }
 };

@@ -166,6 +166,92 @@ export const deleteTeam = async (id: string) => {
     },
   });
 };
+
+export async function deleteTeamPermanently(teamId: string) {
+  // Check if team exists
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+  });
+
+  if (!team) {
+    throw new Error("Team not found.");
+  }
+
+  // Check if submission exists
+  const project = await prisma.project.findUnique({
+    where: { teamId },
+  });
+
+  if (project) {
+    throw new Error("Cannot delete team: submission already exists.");
+  }
+
+  // Check if any score exists
+  const scoreCount = await prisma.score.count({
+    where: { teamId },
+  });
+
+  if (scoreCount > 0) {
+    throw new Error("Cannot delete team: already scored by judges.");
+  }
+
+  // Check if payment is paid
+  const payment = await prisma.payment.findUnique({
+    where: { teamId },
+  });
+
+  if (payment?.status === "paid") {
+    throw new Error("Cannot delete team: payment has already been made.");
+  }
+
+  // Proceed with permanent deletion
+  await prisma.$transaction([
+    // Delete payment verification logs
+    prisma.paymentVerificationLog.deleteMany({
+      where: {
+        payment: {
+          teamId: teamId,
+        },
+      },
+    }),
+
+    // Delete payment record
+    prisma.payment.deleteMany({
+      where: { teamId },
+    }),
+
+    // Delete team members
+    prisma.teamMember.deleteMany({
+      where: { teamId },
+    }),
+
+    // Reset unique code pool
+    prisma.uniqueCodePool.updateMany({
+      where: { teamId },
+      data: {
+        teamId: null,
+        isUsed: false,
+        usedAt: null,
+      },
+    }),
+
+    // Delete presentation slot
+    prisma.presentationSlot.deleteMany({
+      where: { teamId },
+    }),
+
+    // Finally, delete the team itself
+    prisma.team.delete({
+      where: { id: teamId },
+    }),
+  ]);
+
+  return {
+    success: true,
+    message: "Team deleted permanently.",
+  };
+}
+
 export const updateSubmissionLink = ({
   teamId,
   filePath,
