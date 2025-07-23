@@ -15,7 +15,7 @@ import { teamUpload } from "../middlewares/team.middleware copy";
 const router = Router();
 
 router.use(authenticate);
-router.get("/", authorizeRole(["admin", "leader"]), getMyTeam);
+router.get("/", authorizeRole(["admin", "leader", "judge"]), getMyTeam);
 router.get("/:id", authorizeRole(["admin", "leader"]), getTeamById);
 router.post(
   "/",

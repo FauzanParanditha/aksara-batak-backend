@@ -9,11 +9,10 @@ import {
 
 export const getMyTeam = async (req: Request, res: Response) => {
   const isAdmin = req.user?.role;
-  if (isAdmin == "admin") {
+  if (isAdmin == "admin" || isAdmin == "judge") {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = (req.query.search as string) || undefined;
-
     const team = await service.getAllTeams(page, limit, req, search);
     res.json(team);
   } else {

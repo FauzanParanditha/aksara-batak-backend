@@ -133,6 +133,9 @@ export const getAllTeams = async (
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * limit,
     take: limit,
+    include: {
+      scores: true,
+    },
   });
 
   return {
@@ -148,7 +151,7 @@ export const getAllTeams = async (
 export const getTeamById = (leaderId: string) =>
   prisma.team.findFirst({
     where: { leaderId },
-    include: { members: true },
+    include: { members: true, scores: true },
   });
 export const getTeamByIdAdmin = (id: string) =>
   prisma.team.findUnique({ where: { id } });
