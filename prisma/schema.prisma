@@ -7,12 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  admin
-  leader
-  judge
-}
-
 enum EmailType {
   qr
   certificate
@@ -57,7 +51,6 @@ model User {
   passwordHash           String
   phone                  String?
   role                   String
-  newRole                UserRole?
   emailVerificationToken String?
   isVerified             Boolean                  @default(false)
   createdAt              DateTime                 @default(now())
