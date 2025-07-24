@@ -14,6 +14,7 @@ import emailLogRoutes from "./routes/email-log.routes";
 import paylabsRoutes from "./routes/paylabs.route";
 import paymentRoutes from "./routes/payment.route";
 import verifiedLogRoutes from "./routes/paymentVerified-log.routes";
+import scoreRoutes from "./routes/score.route";
 import teamRoutes from "./routes/team.route";
 import teamMemberRoutes from "./routes/teamMember.route";
 import userRoutes from "./routes/user.route";
@@ -45,6 +46,7 @@ app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/email-logs", emailLogRoutes);
 app.use("/api/v1/verified-logs", verifiedLogRoutes);
 app.use("/api/v1/announcements", announcementRoutes);
+app.use("/api/v1/scores", scoreRoutes);
 
 // Contoh route test
 app.get("/", (req, res) => {
