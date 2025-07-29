@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Request } from "express";
+import { calculateWeightedScore } from "../utils/helper";
 
 const prisma = new PrismaClient();
 
@@ -138,8 +139,13 @@ export const getAllTeams = async (
     },
   });
 
+  const teamsWithScore = teams.map((team) => ({
+    ...team,
+    weightedScore: calculateWeightedScore(team.scores),
+  }));
+
   return {
-    data: teams,
+    data: teamsWithScore,
     meta: {
       page,
       limit,
@@ -148,11 +154,21 @@ export const getAllTeams = async (
     },
   };
 };
-export const getTeamById = (leaderId: string) =>
-  prisma.team.findFirst({
+export const getTeamById = async (leaderId: string) => {
+  const team = await prisma.team.findFirst({
     where: { leaderId },
     include: { members: true, scores: true },
   });
+
+  if (!team) return null;
+
+  const weightedScore = calculateWeightedScore(team.scores);
+
+  return {
+    ...team,
+    weightedScore,
+  };
+};
 export const getTeamByIdAdmin = (id: string) =>
   prisma.team.findUnique({ where: { id } });
 export const updateTeam = (id: string, data: any) =>

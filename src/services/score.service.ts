@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { calculateWeightedScore } from "../utils/helper";
 
 const prisma = new PrismaClient();
 
@@ -38,4 +39,19 @@ export const createOrUpdateScore = async (
       });
     }
   }
+};
+
+export const getTeamWeightedScore = async (teamId: string) => {
+  const scores = await prisma.score.findMany({
+    where: { teamId },
+    select: { criteria: true, score: true },
+  });
+
+  const weightedScore = calculateWeightedScore(scores);
+
+  return {
+    teamId,
+    weightedScore,
+    details: scores,
+  };
 };
