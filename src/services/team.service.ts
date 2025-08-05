@@ -110,24 +110,26 @@ export const getAllTeams = async (
   page = 1,
   limit = 10,
   req: Request,
-  search?: string
+  search?: string,
+  role?: "admin" | "judge",
+  judgeId?: string // hanya digunakan jika role === "judge"
 ) => {
   const { status } = req.query;
 
-  let where = {};
+  let where: any = {};
 
-  if (typeof search === "string" && search != "") {
-    where = {
-      OR: [
-        { teamName: { contains: search, mode: "insensitive" } },
-        { id: { contains: search, mode: "insensitive" } },
-      ],
-    };
+  if (typeof search === "string" && search.trim() !== "") {
+    where.OR = [
+      { teamName: { contains: search, mode: "insensitive" } },
+      { id: { contains: search, mode: "insensitive" } },
+    ];
   }
 
-  const totalCount = await prisma.team.count({
-    where,
-  });
+  if (typeof status === "string" && status !== "") {
+    where.status = status;
+  }
+
+  const totalCount = await prisma.team.count({ where });
 
   const teams = await prisma.team.findMany({
     where,
@@ -135,14 +137,54 @@ export const getAllTeams = async (
     skip: (page - 1) * limit,
     take: limit,
     include: {
-      scores: true,
+      scores: {
+        select: {
+          judgeId: true,
+          criteria: true,
+          score: true,
+        },
+      },
     },
   });
 
-  const teamsWithScore = teams.map((team) => ({
-    ...team,
-    weightedScore: calculateWeightedScore(team.scores),
-  }));
+  const teamsWithScore = teams.map((team) => {
+    let weightedScore: number | null = null;
+
+    if (role === "judge" && judgeId) {
+      // Filter hanya skor dari juri tertentu
+      const personalScores = team.scores.filter((s) => s.judgeId === judgeId);
+
+      weightedScore =
+        personalScores.length > 0
+          ? Number(calculateWeightedScore(personalScores).toFixed(2))
+          : null;
+    } else if (role === "admin") {
+      // Kelompokkan skor per juri
+      const grouped: Record<string, { criteria: string; score: number }[]> = {};
+      for (const s of team.scores) {
+        if (!grouped[s.judgeId]) grouped[s.judgeId] = [];
+        grouped[s.judgeId].push({ criteria: s.criteria, score: s.score });
+      }
+
+      const judgeScores = Object.values(grouped).map((scores) =>
+        calculateWeightedScore(scores)
+      );
+
+      weightedScore =
+        judgeScores.length > 0
+          ? Number(
+              (
+                judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length
+              ).toFixed(2)
+            )
+          : null;
+    }
+
+    return {
+      ...team,
+      weightedScore,
+    };
+  });
 
   return {
     data: teamsWithScore,
@@ -154,21 +196,51 @@ export const getAllTeams = async (
     },
   };
 };
+
 export const getTeamById = async (leaderId: string) => {
   const team = await prisma.team.findFirst({
     where: { leaderId },
-    include: { members: true, scores: true },
+    include: {
+      members: true,
+      scores: {
+        select: {
+          judgeId: true,
+          criteria: true,
+          score: true,
+        },
+      },
+    },
   });
 
   if (!team) return null;
 
-  const weightedScore = calculateWeightedScore(team.scores);
+  // Kelompokkan skor berdasarkan judgeId
+  const grouped: Record<string, { criteria: string; score: number }[]> = {};
+  for (const s of team.scores) {
+    if (!grouped[s.judgeId]) grouped[s.judgeId] = [];
+    grouped[s.judgeId].push({
+      criteria: s.criteria,
+      score: s.score,
+    });
+  }
+
+  // Hitung skor total per juri
+  const judgeScores = Object.values(grouped).map((scoreList) =>
+    calculateWeightedScore(scoreList)
+  );
+
+  // Rata-rata dari semua skor juri
+  const weightedScore =
+    judgeScores.length > 0
+      ? judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length
+      : 0;
 
   return {
     ...team,
-    weightedScore,
+    weightedScore: Number(weightedScore.toFixed(2)),
   };
 };
+
 export const getTeamByIdAdmin = (id: string) =>
   prisma.team.findUnique({ where: { id } });
 export const updateTeam = (id: string, data: any) =>

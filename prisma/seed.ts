@@ -4,11 +4,10 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Create admin and judge user
+  // 1. Create Users
   const password = await bcrypt.hash('Pandi@123#', 10);
-
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
+    where: { email: 'admin@pandi.id' },
     update: {},
     create: {
       fullName: 'Admin',
@@ -19,8 +18,8 @@ async function main() {
     },
   });
 
-  const judge = await prisma.user.upsert({
-    where: { email: 'judge@example.com' },
+  const judge1 = await prisma.user.upsert({
+    where: { email: 'judge@pandi.id' },
     update: {},
     create: {
       fullName: 'Judge',
@@ -31,53 +30,77 @@ async function main() {
     },
   });
 
-  // 2. Registrar → Domain map
-  const data: Record<string, string[]> = {
+  const judge2 = await prisma.user.upsert({
+    where: { email: 'judge2@pandi.id' },
+    update: {},
+    create: {
+      fullName: 'Judge',
+      email: 'judge2@pandi.id',
+      passwordHash: password,
+      role: 'judge',
+      isVerified: true,
+    },
+  });
+
+  // 2. Create Registrars
+  const registrarNames = ['Rumahweb', 'Mediacloud', 'Domainesia', 'Niagahoster', 'Exabytes'];
+  const registrars: Record<string, { id: string }> = {};
+  for (const name of registrarNames) {
+    registrars[name] = await prisma.registrar.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  // 3. Map domains per registrar (from spreadsheet)
+  const domainMap: Record<string, string[]> = {
     Rumahweb: [
-      "hatobangon.id", "aksara.id", "jabuinbatak.id", "aksaranta.id", "sinhho.id", "bataka.id", "samsil.id", "bataksara.id",
-      "boanaksara.id", "belajarakasarabatak.id", "aksara-batak-digital.id", "podaHoras.id", "arsipaksarabatak.id", "mahago.id",
-      "studiaksarabatak.id", "horaseolu.id", "membatak.id", "mahitta.id", "learnaksarabatak.id", "arezna.id", "wonderful-project.id",
-      "batakscript.id", "batubako.id", "batakverse.id", "aksaraku.id", "horizons.id", "piforrr.id", "aksarakolal.id", "maraksara.id",
-      "khavi.id", "edwan.id", "velthoria.id", "rivetcore.id", "suratbatak.id", "cintabatak.id"
+      'hatobangon.id','shinho.id','boanaksara.id','arsipaksarabatak.id','membatak.id',
+      'wonderful-project.id','batakverse.id','piforrr.id','khavi.id','rivetc0re.id',
+      'aksaera.id','batak.id','belajarakasara.id','mahago.id','halakhita.id','batakscript.id',
+      'aksaraku.id','aksaralokal.id','edwan.id','suratbatak.id','jabunibatak.id',
+      'samsil.id','aksara-batak-digital.id','studiaksarabatak.id','learnaksarabatak.id',
+      'batakuba.id','horizons.id','markasara.id','velthoria.id','cintabatak.id',
+      'aksaranta.id','aksara.id','podahoras.id','horasedu.id','areznz.id'
     ],
     Mediacloud: [
-      "matakba.id", "tondibatak.id", "abitebelajar.id", "batakwonderful.id", "base44.id", "parjolo.id", "pahoda.id", "nauliaksara.id"
+      'matakba.id','tondibatak.id','abatibelajar.id','batakwonderful.id',
+      'base4d.id','pariolo.id','pahoda.id','nauliaksara.id',
     ],
     Domainesia: [
-      "sukubatak.id", "galayaksara.id", "batakbersejarah.id", "satupintu.id", "hurufbatak.id"
+      'sukubatak.id','galaxyaksara.id','bataksejarah.id','satupintu.id','hurufbatak.id',
     ],
-    Niagahoster: ["inabatak.id"],
-    Exabytes: ["aminudinaz.id"],
-    IDCH: ["yogik.id"],
+    Niagahoster: ['inabatak.id'],
+    Exabytes: ['aminudinaz.id'],
   };
 
-  for (const [registrarName, domains] of Object.entries(data)) {
-    const registrar = await prisma.registrar.upsert({
-      where: { name: registrarName },
-      update: {},
-      create: {
-        name: registrarName,
-      },
-    });
+  // 4. Insert Teams (domain = teamName), category = "default", leader = admin
+  for (const registrarName in domainMap) {
+    const registrar = registrars[registrarName];
+    const domains = domainMap[registrarName];
 
-    for (const domainName of domains) {
-      await prisma.domainEntry.upsert({
-        where: { domainName },
-        update: {},
-        create: {
-          domainName,
+    for (const domain of domains) {
+      await prisma.team.create({
+        data: {
+          teamName: domain,
+          category: 'default',
+          leaderId: admin.id,
           registrarId: registrar.id,
+          status: 'draft',
         },
       });
     }
   }
 
-  console.log('✅ Seed completed: Admin, Judge, Registrars, Domains');
+  console.log('✅ Seed completed!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed error:', e);
+    console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => {
+    prisma.$disconnect();
+  });

@@ -24,14 +24,7 @@ export const getDashboardStatsLeader = async (userId: string) => {
 };
 
 export const getDashboardStatsJudge = async () => {
-  const totalSubmissions = await prisma.team.count({
-    where: {
-      submissionLink: {
-        not: null, 
-        notIn: ["", " "], 
-      },
-    },
-  });
+  const totalSubmissions = await prisma.team.count({});
 
   return {
     totalSubmissions,

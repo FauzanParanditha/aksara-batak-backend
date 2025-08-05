@@ -9,11 +9,25 @@ import {
 
 export const getMyTeam = async (req: Request, res: Response) => {
   const isAdmin = req.user?.role;
-  if (isAdmin == "admin" || isAdmin == "judge") {
+  if (isAdmin == "admin") {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = (req.query.search as string) || undefined;
-    const team = await service.getAllTeams(page, limit, req, search);
+    const team = await service.getAllTeams(page, limit, req, search, "admin");
+    res.json(team);
+  } else if (isAdmin == "judge") {
+    const judgeId = req.user?.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || undefined;
+    const team = await service.getAllTeams(
+      page,
+      limit,
+      req,
+      search,
+      "judge",
+      judgeId
+    );
     res.json(team);
   } else {
     const team = await service.getTeamById(req.user!.id);
