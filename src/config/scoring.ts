@@ -1,9 +1,11 @@
 export const SCORING_WEIGHT: Record<string, number> = {
-  usefulness_and_relevance: 0.25,
-  design_and_user_experience: 0.2,
-  performance_and_technical_stability: 0.2,
-  innovation_and_differentiation: 0.2,
-  impact_and_scalability_potential: 0.15,
+  website_accessibility: 0.1,
+  platform_stability: 0.1,
+  visual_design: 0.15,
+  navigation_responsiveness: 0.1,
+  content_weight: 0.3,
+  creativity_innovation: 0.15,
+  consistency_relevance: 0.1,
 };
 
 const total = Object.values(SCORING_WEIGHT).reduce((a, b) => a + b, 0);
