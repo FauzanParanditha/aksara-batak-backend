@@ -49,6 +49,7 @@ async function main() {
     "Domainesia",
     "Niagahoster",
     "Exabytes",
+    "IDCH",
   ];
   const registrars: Record<string, { id: string }> = {};
   for (const name of registrarNames) {
