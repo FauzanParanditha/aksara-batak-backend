@@ -1,49 +1,55 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
   // 1. Create Users
-  const password = await bcrypt.hash('Pandi@123#', 10);
+  const password = await bcrypt.hash("Pandi@123#", 10);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@pandi.id' },
+    where: { email: "admin@pandi.id" },
     update: {},
     create: {
-      fullName: 'Admin',
-      email: 'admin@pandi.id',
+      fullName: "Admin",
+      email: "admin@pandi.id",
       passwordHash: password,
-      role: 'admin',
+      role: "admin",
       isVerified: true,
     },
   });
 
   const judge1 = await prisma.user.upsert({
-    where: { email: 'judge@pandi.id' },
+    where: { email: "judge@pandi.id" },
     update: {},
     create: {
-      fullName: 'Judge',
-      email: 'judge@pandi.id',
+      fullName: "Judge",
+      email: "judge@pandi.id",
       passwordHash: password,
-      role: 'judge',
+      role: "judge",
       isVerified: true,
     },
   });
 
   const judge2 = await prisma.user.upsert({
-    where: { email: 'judge2@pandi.id' },
+    where: { email: "judge2@pandi.id" },
     update: {},
     create: {
-      fullName: 'Judge',
-      email: 'judge2@pandi.id',
+      fullName: "Judge",
+      email: "judge2@pandi.id",
       passwordHash: password,
-      role: 'judge',
+      role: "judge",
       isVerified: true,
     },
   });
 
   // 2. Create Registrars
-  const registrarNames = ['Rumahweb', 'Mediacloud', 'Domainesia', 'Niagahoster', 'Exabytes'];
+  const registrarNames = [
+    "Rumahweb",
+    "Mediacloud",
+    "Domainesia",
+    "Niagahoster",
+    "Exabytes",
+  ];
   const registrars: Record<string, { id: string }> = {};
   for (const name of registrarNames) {
     registrars[name] = await prisma.registrar.upsert({
@@ -56,23 +62,62 @@ async function main() {
   // 3. Map domains per registrar (from spreadsheet)
   const domainMap: Record<string, string[]> = {
     Rumahweb: [
-      'hatobangon.id','shinho.id','boanaksara.id','arsipaksarabatak.id','membatak.id',
-      'wonderful-project.id','batakverse.id','piforrr.id','khavi.id','rivetc0re.id',
-      'aksaera.id','batak.id','belajarakasara.id','mahago.id','halakhita.id','batakscript.id',
-      'aksaraku.id','aksaralokal.id','edwan.id','suratbatak.id','jabunibatak.id',
-      'samsil.id','aksara-batak-digital.id','studiaksarabatak.id','learnaksarabatak.id',
-      'batakuba.id','horizons.id','markasara.id','velthoria.id','cintabatak.id',
-      'aksaranta.id','aksara.id','podahoras.id','horasedu.id','areznz.id'
+      "hatobangon.id",
+      "shinho.id",
+      "boanaksara.id",
+      "arsipaksarabatak.id",
+      "membatak.id",
+      "wonderful-project.id",
+      "batakverse.id",
+      "piforrr.id",
+      "khavi.id",
+      "rivetc0re.id",
+      "aksaera.id",
+      "batak.id",
+      "belajarakasara.id",
+      "mahago.id",
+      "halakhita.id",
+      "batakscript.id",
+      "aksaraku.id",
+      "aksaralokal.id",
+      "edwan.id",
+      "suratbatak.id",
+      "jabunibatak.id",
+      "samsil.id",
+      "aksara-batak-digital.id",
+      "studiaksarabatak.id",
+      "learnaksarabatak.id",
+      "batakuba.id",
+      "horizons.id",
+      "markasara.id",
+      "velthoria.id",
+      "cintabatak.id",
+      "aksaranta.id",
+      "aksara.id",
+      "podahoras.id",
+      "horasedu.id",
+      "areznz.id",
     ],
     Mediacloud: [
-      'matakba.id','tondibatak.id','abatibelajar.id','batakwonderful.id',
-      'base4d.id','pariolo.id','pahoda.id','nauliaksara.id',
+      "matakba.id",
+      "tondibatak.id",
+      "abatibelajar.id",
+      "batakwonderful.id",
+      "base4d.id",
+      "pariolo.id",
+      "pahoda.id",
+      "nauliaksara.id",
     ],
     Domainesia: [
-      'sukubatak.id','galaxyaksara.id','bataksejarah.id','satupintu.id','hurufbatak.id',
+      "sukubatak.id",
+      "galaxyaksara.id",
+      "bataksejarah.id",
+      "satupintu.id",
+      "hurufbatak.id",
     ],
-    Niagahoster: ['inabatak.id'],
-    Exabytes: ['aminudinaz.id'],
+    Niagahoster: ["inabatak.id"],
+    Exabytes: ["aminudinaz.id"],
+    IDCH: ["yogik.id"],
   };
 
   // 4. Insert Teams (domain = teamName), category = "default", leader = admin
@@ -84,16 +129,16 @@ async function main() {
       await prisma.team.create({
         data: {
           teamName: domain,
-          category: 'default',
+          category: "default",
           leaderId: admin.id,
           registrarId: registrar.id,
-          status: 'draft',
+          status: "draft",
         },
       });
     }
   }
 
-  console.log('✅ Seed completed!');
+  console.log("✅ Seed completed!");
 }
 
 main()
