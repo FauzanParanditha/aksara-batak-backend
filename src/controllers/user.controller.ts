@@ -68,6 +68,15 @@ export const getCurrentUser = async (req: Request, res: Response) => {
   res.json(user);
 };
 
+export const getJudge = async (req: Request, res: Response) => {
+  const judge = await service.getUserJudge();
+  if (!judge) {
+    res.status(404).json({ message: "Judge not found" });
+    return;
+  }
+  res.json(judge);
+};
+
 export const changePassword = async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 

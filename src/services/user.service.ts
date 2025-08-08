@@ -72,6 +72,20 @@ export const getUserById = (id: string) =>
       deletedAt: true,
     },
   });
+
+export const getUserJudge = () =>
+  prisma.user.findMany({
+    where: {
+      role: "judge",
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+    orderBy: { fullName: "asc" },
+  });
+
 export const getUserPassword = (id: string) =>
   prisma.user.findUnique({
     where: { id },

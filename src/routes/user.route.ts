@@ -8,6 +8,7 @@ const router = Router();
 router.use(authenticate);
 router.get("/", authorizeRole(["admin"]), ctrl.getAll);
 router.get("/me", ctrl.getCurrentUser);
+router.get("/judges", authorizeRole(["admin"]), ctrl.getJudge);
 router.get("/:id", authorizeRole(["admin"]), ctrl.getOne);
 router.post("/", authorizeRole(["admin"]), ctrl.create);
 router.put("/:id", authorizeRole(["admin", "leader"]), ctrl.update);

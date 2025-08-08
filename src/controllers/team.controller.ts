@@ -50,19 +50,19 @@ export const createTeam = async (req: Request, res: Response) => {
     return;
   }
 
-  if (!req.file) {
-    res.status(400).json({ error: "Photo teams file is required" });
-    return;
-  }
+  // if (!req.file) {
+  //   res.status(400).json({ error: "Photo teams file is required" });
+  //   return;
+  // }
 
-  const photoUrl = `/uploads/teams/${req.file.filename}`;
+  // const photoUrl = `/uploads/teams/${req.file.filename}`;
 
   const team = await service.createTeam({
     teamName: data.teamName,
     category: data.category,
     leaderId,
     institution: data.institution,
-    photoUrl,
+    // photoUrl,
   });
   res.status(201).json(team);
 };
@@ -82,14 +82,14 @@ export const updateTeam = async (req: Request, res: Response) => {
       deleteLocalFileTeam(team.photoUrl);
     }
 
-    if (!req.file) {
-      res.status(400).json({ error: "Photo team file is required" });
-      return;
-    }
-    const photoUrl = `/uploads/teams/${req.file.filename}`;
+    // if (!req.file) {
+    //   res.status(400).json({ error: "Photo team file is required" });
+    //   return;
+    // }
+    // const photoUrl = `/uploads/teams/${req.file.filename}`;
     const updated = await service.updateTeam(req.params.id, {
       ...data,
-      photoUrl,
+      // photoUrl,
     });
     res.json(updated);
   } else {
@@ -103,15 +103,15 @@ export const updateTeam = async (req: Request, res: Response) => {
       deleteLocalFileTeam(team.photoUrl);
     }
 
-    if (!req.file) {
-      res.status(400).json({ error: "Photo team file is required" });
-      return;
-    }
-    const photoUrl = `/uploads/teams/${req.file.filename}`;
+    // if (!req.file) {
+    //   res.status(400).json({ error: "Photo team file is required" });
+    //   return;
+    // }
+    // const photoUrl = `/uploads/teams/${req.file.filename}`;
 
     const updated = await service.updateTeam(req.params.id, {
       ...data,
-      photoUrl,
+      // photoUrl,
     });
     res.json(updated);
   }

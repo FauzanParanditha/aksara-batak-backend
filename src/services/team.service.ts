@@ -37,7 +37,7 @@ export const createTeam = async (data: {
   category: string;
   leaderId: string;
   institution: string;
-  photoUrl: string;
+  photoUrl?: string;
 }) => {
   const existingTeam = await prisma.team.findFirst({
     where: { teamName: data.teamName },
@@ -142,6 +142,11 @@ export const getAllTeams = async (
           judgeId: true,
           criteria: true,
           score: true,
+          judge: {
+            select: {
+              fullName: true,
+            },
+          },
         },
       },
     },

@@ -41,6 +41,43 @@ export const createOrUpdateScore = async (
   }
 };
 
+export const createOrUpdateScoreForMultipleJudges = async (
+  judgeIds: string[],
+  teamId: string,
+  scores: Record<string, number>, // key = criteria, value = score
+  comments?: string
+) => {
+  for (const judgeId of judgeIds) {
+    const existing = await prisma.score.findMany({
+      where: { judgeId, teamId },
+    });
+
+    for (const [criteria, score] of Object.entries(scores)) {
+      const existingScore = existing.find((s) => s.criteria === criteria);
+
+      if (existingScore) {
+        await prisma.score.update({
+          where: { id: existingScore.id },
+          data: {
+            score,
+            comment: comments ?? existingScore.comment,
+          },
+        });
+      } else {
+        await prisma.score.create({
+          data: {
+            teamId,
+            judgeId,
+            criteria,
+            score,
+            comment: comments ?? null,
+          },
+        });
+      }
+    }
+  }
+};
+
 export const getTeamWeightedScore = async (teamId: string) => {
   const scores = await prisma.score.findMany({
     where: { teamId },
