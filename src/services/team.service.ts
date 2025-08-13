@@ -116,12 +116,17 @@ export const getAllTeams = async (
 ) => {
   const { status } = req.query;
 
+  // Normalisasi pagination
+  page = Math.max(1, Number(page) || 1);
+  limit = Math.min(100, Math.max(1, Number(limit) || 10));
+
   let where: any = {};
 
   if (typeof search === "string" && search.trim() !== "") {
+    const term = search.trim();
     where.OR = [
-      { teamName: { contains: search, mode: "insensitive" } },
-      { id: { contains: search, mode: "insensitive" } },
+      { teamName: { contains: term, mode: "insensitive" } },
+      { id: { contains: term, mode: "insensitive" } },
     ];
   }
 
@@ -129,66 +134,74 @@ export const getAllTeams = async (
     where.status = status;
   }
 
-  const totalCount = await prisma.team.count({ where });
-
-  const teams = await prisma.team.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
-    include: {
-      scores: {
-        select: {
-          judgeId: true,
-          criteria: true,
-          score: true,
-          judge: {
-            select: {
-              fullName: true,
-            },
+  // ⬇️ KUNCI: include.scores dikondisikan oleh role & judgeId
+  const scoresInclude =
+    role === "judge" && judgeId
+      ? {
+          where: { judgeId },
+          select: {
+            judgeId: true,
+            criteria: true,
+            score: true,
+            comment: true,
+            judge: { select: { fullName: true } },
           },
-        },
-      },
-    },
-  });
+        }
+      : {
+          select: {
+            judgeId: true,
+            criteria: true,
+            score: true,
+            comment: true,
+            judge: { select: { fullName: true } },
+          },
+        };
+
+  const [totalCount, teams] = await prisma.$transaction([
+    prisma.team.count({ where }),
+    prisma.team.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: { scores: scoresInclude },
+    }),
+  ]);
 
   const teamsWithScore = teams.map((team) => {
     let weightedScore: number | null = null;
 
     if (role === "judge" && judgeId) {
-      // Filter hanya skor dari juri tertentu
-      const personalScores = team.scores.filter((s) => s.judgeId === judgeId);
-
+      // Sudah ter-filter di DB, tinggal hitung
+      const personalScores = team.scores as {
+        criteria: string;
+        score: number;
+      }[];
       weightedScore =
         personalScores.length > 0
           ? Number(calculateWeightedScore(personalScores).toFixed(2))
           : null;
     } else if (role === "admin") {
-      // Kelompokkan skor per juri
+      // Kelompokkan per juri, lalu rata-rata antar juri
       const grouped: Record<string, { criteria: string; score: number }[]> = {};
-      for (const s of team.scores) {
+      for (const s of team.scores as any[]) {
         if (!grouped[s.judgeId]) grouped[s.judgeId] = [];
         grouped[s.judgeId].push({ criteria: s.criteria, score: s.score });
       }
-
-      const judgeScores = Object.values(grouped).map((scores) =>
+      const perJudge = Object.values(grouped).map((scores) =>
         calculateWeightedScore(scores)
       );
-
       weightedScore =
-        judgeScores.length > 0
+        perJudge.length > 0
           ? Number(
               (
-                judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length
+                perJudge.reduce((sum, v) => sum + v, 0) / perJudge.length
               ).toFixed(2)
             )
           : null;
     }
 
-    return {
-      ...team,
-      weightedScore,
-    };
+    return { ...team, weightedScore };
   });
 
   return {
