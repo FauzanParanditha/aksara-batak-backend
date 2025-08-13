@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import fs from "fs";
 import helmet from "helmet";
 import path from "path";
 import { errorHandler } from "./middlewares/error.middleware";
@@ -21,12 +22,45 @@ import userRoutes from "./routes/user.route";
 
 dotenv.config();
 
+const allowedFile = "./allowed-origins.json";
+const pendingFile = "./pending-origins.json";
+
+if (!fs.existsSync(allowedFile)) {
+  fs.writeFileSync(allowedFile, JSON.stringify([], null, 2));
+}
+if (!fs.existsSync(pendingFile)) {
+  fs.writeFileSync(pendingFile, JSON.stringify([], null, 2));
+}
+
+let allowedOrigins = JSON.parse(fs.readFileSync(allowedFile, "utf-8"));
+
 const app = express();
 app.use(requestLogger);
 app.use(errorHandler);
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Izinkan request tanpa origin (Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Kalau origin ada di daftar allowed → izinkan
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Origin belum diizinkan → masukkan ke pending list jika belum ada
+      let pendingOrigins = JSON.parse(fs.readFileSync(pendingFile, "utf-8"));
+      if (!pendingOrigins.includes(origin)) {
+        pendingOrigins.push(origin);
+        fs.writeFileSync(pendingFile, JSON.stringify(pendingOrigins, null, 2));
+        console.log(
+          `❌ Origin ${origin} diblokir dan ditambahkan ke pending-origins.json untuk direview.`
+        );
+      }
+
+      // Blok request
+      return callback(new Error(`CORS blocked: Origin ${origin} not allowed`));
+    },
     credentials: true,
   })
 );
