@@ -168,7 +168,7 @@ export const getAllTeams = async (
     }),
   ]);
 
-  const teamsWithScore = teams.map((team) => {
+  let teamsWithScore = teams.map((team) => {
     let weightedScore: number | null = null;
 
     if (role === "judge" && judgeId) {
@@ -203,6 +203,14 @@ export const getAllTeams = async (
 
     return { ...team, weightedScore };
   });
+
+  if (role === "admin") {
+    teamsWithScore = teamsWithScore.sort((a, b) => {
+      if (b.weightedScore === null) return -1; // null di akhir
+      if (a.weightedScore === null) return 1;
+      return b.weightedScore - a.weightedScore;
+    });
+  }
 
   return {
     data: teamsWithScore,
