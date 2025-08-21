@@ -210,7 +210,7 @@ export const getAllTeams = async ({
     orderBy = [{ [field]: order } as Prisma.TeamOrderByWithRelationInput];
   } else {
     // fallback aman
-    orderBy = [{ createdAt: "desc" }];
+    orderBy = [{ createdAt: order }];
   }
 
   // Query + pagination
@@ -236,12 +236,13 @@ export const getAllTeams = async ({
         }))
       : role === "judge" && judgeId
       ? teams.map((team) => {
-          const personalScores =
-            (team.scores as { criteria: string; score: number }[]) || [];
-          const weighted =
-            personalScores.length > 0
-              ? Number(calculateWeightedScore(personalScores).toFixed(2))
-              : null;
+          const personalScores = team.scores.map((s) => ({
+            criteria: s.criteria,
+            score: s.score,
+          }));
+          const weighted = personalScores.length
+            ? calculateWeightedScore(personalScores, 2) // ← return number|null, sudah dibulatkan
+            : null;
           return { ...team, weightedScore: weighted };
         })
       : teams;
@@ -284,14 +285,15 @@ export const getTeamById = async (leaderId: string) => {
   }
 
   // Hitung skor total per juri
-  const judgeScores = Object.values(grouped).map((scoreList) =>
-    calculateWeightedScore(scoreList)
-  );
+  const judgeScores = Object.values(grouped)
+    .map((scoreList) => calculateWeightedScore(scoreList))
+    .filter((score): score is number => score !== null && score !== undefined);
 
   // Rata-rata dari semua skor juri
   const weightedScore =
     judgeScores.length > 0
-      ? judgeScores.reduce((sum, s) => sum + s, 0) / judgeScores.length
+      ? judgeScores.reduce((sum, s) => (sum ?? 0) + (s ?? 0), 0) /
+        judgeScores.length
       : 0;
 
   return {

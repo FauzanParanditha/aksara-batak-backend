@@ -3,7 +3,10 @@ import { calculateWeightedScore } from "../utils/helper";
 
 const prisma = new PrismaClient();
 
-export async function recomputeAggregatesForScoreChange(teamId: string, judgeId: string) {
+export async function recomputeAggregatesForScoreChange(
+  teamId: string,
+  judgeId: string
+) {
   await prisma.$transaction(async (tx) => {
     // 1) hitung ulang weighted score milik (teamId, judgeId)
     const rows = await tx.score.findMany({
@@ -12,30 +15,40 @@ export async function recomputeAggregatesForScoreChange(teamId: string, judgeId:
     });
 
     if (rows.length === 0) {
+      // Tidak ada satupun skor dari juri tsb -> hapus agregatnya
       await tx.judgeScoreAggregate.deleteMany({ where: { teamId, judgeId } });
     } else {
-      const weighted = calculateWeightedScore(rows); // versi kamu, tanpa normalisasi
-      await tx.judgeScoreAggregate.upsert({
-        where: { teamId_judgeId: { teamId, judgeId } },
-        update: { weightedScore: weighted },
-        create: { teamId, judgeId, weightedScore: weighted },
-      });
+      // Hasil bisa number atau null (jika tak ada kriteria valid untuk dibobotkan)
+      const weighted = calculateWeightedScore(rows, 2); // pastikan versi normalisasi (return number|null)
+
+      if (weighted == null || !Number.isFinite(weighted)) {
+        // Tidak ada nilai valid -> hapus agregat
+        await tx.judgeScoreAggregate.deleteMany({ where: { teamId, judgeId } });
+      } else {
+        // Upsert nilai valid
+        await tx.judgeScoreAggregate.upsert({
+          where: { teamId_judgeId: { teamId, judgeId } },
+          update: { weightedScore: weighted },
+          create: { teamId, judgeId, weightedScore: weighted },
+        });
+      }
     }
 
-    // 2) hitung ulang avgScore tim dari seluruh agregat juri
+    // 2) hitung ulang avgScore tim dari seluruh agregat juri YANG VALID
     const aggs = await tx.judgeScoreAggregate.findMany({
       where: { teamId },
       select: { weightedScore: true },
     });
 
-    const judgeCount = aggs.length;
+    // filter berjaga-jaga bila schema memperbolehkan null
+    const valid = aggs
+      .map((a) => a.weightedScore)
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+
+    const judgeCount = valid.length;
     const avgScore =
       judgeCount > 0
-        ? Number(
-            (
-              aggs.reduce((s, a) => s + a.weightedScore, 0) / judgeCount
-            ).toFixed(2)
-          )
+        ? Number((valid.reduce((s, v) => s + v, 0) / judgeCount).toFixed(2))
         : null;
 
     await tx.team.update({
@@ -44,7 +57,6 @@ export async function recomputeAggregatesForScoreChange(teamId: string, judgeId:
     });
   });
 }
-
 
 export const createOrUpdateScore = async (
   judgeId: string,
@@ -82,7 +94,13 @@ export const createOrUpdateScoreForMultipleJudges = async (
       for (const [criteria, score] of Object.entries(scores)) {
         await tx.score.upsert({
           where: { judgeId_teamId_criteria: { judgeId, teamId, criteria } },
-          create: { teamId, judgeId, criteria, score, comment: comments ?? null },
+          create: {
+            teamId,
+            judgeId,
+            criteria,
+            score,
+            comment: comments ?? null,
+          },
           update: { score, comment: comments ?? undefined },
         });
       }

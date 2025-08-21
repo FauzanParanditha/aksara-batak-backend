@@ -38,7 +38,7 @@ async function backfillAggregates(batchSize = 1000) {
 
         const entries = Object.entries(byJudge);
         for (const [judgeId, arr] of entries) {
-          const w = calculateWeightedScore(arr); // versi kamu (tanpa normalisasi)
+          const w = calculateWeightedScore(arr) ?? 0; // versi kamu (tanpa normalisasi)
           await tx.judgeScoreAggregate.create({
             data: { teamId: t.id, judgeId, weightedScore: w },
           });
@@ -50,7 +50,7 @@ async function backfillAggregates(batchSize = 1000) {
             ? Number(
                 (
                   entries.reduce(
-                    (s, [, arr]) => s + calculateWeightedScore(arr),
+                    (s, [, arr]) => s + (calculateWeightedScore(arr) ?? 0),
                     0
                   ) / judgeCount
                 ).toFixed(2)
