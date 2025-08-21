@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import * as service from "../services/team.service";
 import { deleteLocalFileTeam } from "../utils/helper";
@@ -7,31 +8,115 @@ import {
   updateTeamSchema,
 } from "../validators/team.validator";
 
+const prisma = new PrismaClient();
+
+const isNonEmptyString = (v: unknown): v is string =>
+  typeof v === "string" && v.trim() !== "";
+
 export const getMyTeam = async (req: Request, res: Response) => {
-  const isAdmin = req.user?.role;
-  if (isAdmin == "admin") {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const search = (req.query.search as string) || undefined;
-    const team = await service.getAllTeams(page, limit, req, search, "admin");
-    res.json(team);
-  } else if (isAdmin == "judge") {
-    const judgeId = req.user?.id;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const search = (req.query.search as string) || undefined;
-    const team = await service.getAllTeams(
-      page,
-      limit,
-      req,
-      search,
-      "judge",
-      judgeId
-    );
-    res.json(team);
-  } else {
-    const team = await service.getTeamById(req.user!.id);
-    res.json(team);
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+    const userEmail = req.user?.email;
+
+    // Normalisasi query umum
+    const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
+    const limit =
+      Number(req.query.limit) && Number(req.query.limit) > 0
+        ? Math.min(100, Number(req.query.limit))
+        : 10;
+    const search = isNonEmptyString(req.query.search)
+      ? (req.query.search as string)
+      : undefined;
+
+    if (role === "admin") {
+      // Admin → gunakan listing global + dukung sort=score
+      const result = await service.getAllTeams({
+        page,
+        limit,
+        req,
+        search,
+        role: "admin",
+      });
+      res.json(result);
+      return;
+    }
+
+    if (role === "judge") {
+      // Judge → wajib punya userId untuk filter skor pribadinya
+      if (!userId) {
+        res.status(400).json({ error: "Missing judge id" });
+        return;
+      }
+      const result = await service.getAllTeams({
+        page,
+        limit,
+        req,
+        search,
+        role: "judge",
+        judgeId: userId,
+      });
+      res.json(result);
+      return;
+    }
+
+    // === User biasa (leader/member) ===
+    // Ambil tim yang user pimpin (leaderId) atau user ikuti (TeamMember.email)
+    // + pagination + optional search on teamName/id
+    const where: any = {
+      OR: [
+        { leaderId: userId },
+        userEmail ? { members: { some: { email: userEmail } } } : undefined,
+      ].filter(Boolean),
+    };
+
+    if (isNonEmptyString(search)) {
+      const term = search.trim();
+      where.AND = [
+        {
+          OR: [
+            { teamName: { contains: term, mode: "insensitive" } },
+            { id: { contains: term, mode: "insensitive" } },
+          ],
+        },
+      ];
+    }
+
+    const [totalCount, teams] = await prisma.$transaction([
+      prisma.team.count({ where }),
+      prisma.team.findMany({
+        where,
+        orderBy: { createdAt: "desc" }, // user biasa tidak perlu sort skor
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          members: true,
+          project: true,
+          scores: {
+            select: {
+              judgeId: true,
+              criteria: true,
+              score: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    res.json({
+      data: teams,
+      meta: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
+    return;
+  } catch (err: any) {
+    console.error("getMyTeam error:", err);
+    res.status(500).json({ error: err?.message ?? "Internal Server Error" });
+    return;
   }
 };
 

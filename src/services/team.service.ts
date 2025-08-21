@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Request } from "express";
 import { calculateWeightedScore } from "../utils/helper";
 
@@ -106,38 +106,80 @@ export const createTeam = async (data: {
   return updatedTeam;
 };
 
-export const getAllTeams = async (
+type Role = "admin" | "judge";
+
+const isNonEmptyString = (v: unknown): v is string =>
+  typeof v === "string" && v.trim() !== "";
+
+// Field yang boleh di-sort langsung dari DB
+const SORTABLE_FIELDS: (keyof Prisma.TeamOrderByWithRelationInput)[] = [
+  "createdAt",
+  "updatedAt",
+  "teamName",
+  "status",
+  "avgScore", // mapping dari sort=score (khusus admin)
+];
+
+export interface GetAllTeamsMeta {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface GetAllTeamsParams {
+  page?: number;
+  limit?: number;
+  req: Request;
+  search?: string;
+  role?: Role;
+  judgeId?: string;
+}
+
+export const getAllTeams = async ({
   page = 1,
   limit = 10,
-  req: Request,
-  search?: string,
-  role?: "admin" | "judge",
-  judgeId?: string // hanya digunakan jika role === "judge"
-) => {
-  const { status } = req.query;
+  req,
+  search,
+  role,
+  judgeId,
+}: GetAllTeamsParams) => {
+  // Ambil query tambahan
+  const status = isNonEmptyString(req.query.status)
+    ? req.query.status
+    : undefined;
+  const sortParam = isNonEmptyString(req.query.sort)
+    ? req.query.sort
+    : "createdAt"; // "score" untuk avgScore
+  const orderParam = (
+    isNonEmptyString(req.query.order) ? req.query.order : "desc"
+  ).toLowerCase();
 
   // Normalisasi pagination
   page = Math.max(1, Number(page) || 1);
   limit = Math.min(100, Math.max(1, Number(limit) || 10));
 
-  let where: any = {};
+  // Normalisasi order → Prisma.SortOrder ('asc' | 'desc')
+  const order: Prisma.SortOrder = orderParam === "asc" ? "asc" : "desc";
 
-  if (typeof search === "string" && search.trim() !== "") {
+  // WHERE
+  const where: Prisma.TeamWhereInput = {};
+  if (isNonEmptyString(search)) {
     const term = search.trim();
     where.OR = [
       { teamName: { contains: term, mode: "insensitive" } },
       { id: { contains: term, mode: "insensitive" } },
     ];
   }
-
-  if (typeof status === "string" && status !== "") {
-    where.status = status;
+  if (isNonEmptyString(status)) {
+    // TeamStatus enum di schema, tapi Prisma WhereInput menerima string valid
+    (where as any).status = status;
   }
 
-  // ⬇️ KUNCI: include.scores dikondisikan oleh role & judgeId
+  // INCLUDE scores sesuai role
   const scoresInclude =
     role === "judge" && judgeId
-      ? {
+      ? ({
           where: { judgeId },
           select: {
             judgeId: true,
@@ -146,8 +188,8 @@ export const getAllTeams = async (
             comment: true,
             judge: { select: { fullName: true } },
           },
-        }
-      : {
+        } satisfies Prisma.ScoreFindManyArgs)
+      : ({
           select: {
             judgeId: true,
             criteria: true,
@@ -155,72 +197,63 @@ export const getAllTeams = async (
             comment: true,
             judge: { select: { fullName: true } },
           },
-        };
+        } satisfies Prisma.ScoreFindManyArgs);
 
+  // ORDER BY
+  let orderBy: Prisma.TeamOrderByWithRelationInput[] = [];
+  if (role === "admin" && sortParam === "score") {
+    // score ⇒ pakai avgScore (global-correct) + tie-breaker createdAt
+    orderBy = [{ avgScore: order }, { createdAt: "desc" }];
+  } else if ((SORTABLE_FIELDS as readonly string[]).includes(sortParam)) {
+    // field biasa yang diizinkan
+    const field = sortParam as keyof Prisma.TeamOrderByWithRelationInput;
+    orderBy = [{ [field]: order } as Prisma.TeamOrderByWithRelationInput];
+  } else {
+    // fallback aman
+    orderBy = [{ createdAt: "desc" }];
+  }
+
+  // Query + pagination
   const [totalCount, teams] = await prisma.$transaction([
     prisma.team.count({ where }),
     prisma.team.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * limit,
       take: limit,
       include: { scores: scoresInclude },
     }),
   ]);
 
-  let teamsWithScore = teams.map((team) => {
-    let weightedScore: number | null = null;
+  // Post-process weightedScore:
+  // - Admin: gunakan avgScore yang sudah dihitung di DB (via hook recompute/backfill)
+  // - Judge: hitung weightedScore pribadi dari include.scores yang sudah terfilter judgeId
+  const data =
+    role === "admin"
+      ? teams.map((t) => ({
+          ...t,
+          weightedScore: t.avgScore ?? null,
+        }))
+      : role === "judge" && judgeId
+      ? teams.map((team) => {
+          const personalScores =
+            (team.scores as { criteria: string; score: number }[]) || [];
+          const weighted =
+            personalScores.length > 0
+              ? Number(calculateWeightedScore(personalScores).toFixed(2))
+              : null;
+          return { ...team, weightedScore: weighted };
+        })
+      : teams;
 
-    if (role === "judge" && judgeId) {
-      // Sudah ter-filter di DB, tinggal hitung
-      const personalScores = team.scores as {
-        criteria: string;
-        score: number;
-      }[];
-      weightedScore =
-        personalScores.length > 0
-          ? Number(calculateWeightedScore(personalScores).toFixed(2))
-          : null;
-    } else if (role === "admin") {
-      // Kelompokkan per juri, lalu rata-rata antar juri
-      const grouped: Record<string, { criteria: string; score: number }[]> = {};
-      for (const s of team.scores as any[]) {
-        if (!grouped[s.judgeId]) grouped[s.judgeId] = [];
-        grouped[s.judgeId].push({ criteria: s.criteria, score: s.score });
-      }
-      const perJudge = Object.values(grouped).map((scores) =>
-        calculateWeightedScore(scores)
-      );
-      weightedScore =
-        perJudge.length > 0
-          ? Number(
-              (
-                perJudge.reduce((sum, v) => sum + v, 0) / perJudge.length
-              ).toFixed(2)
-            )
-          : null;
-    }
-
-    return { ...team, weightedScore };
-  });
-
-  if (role === "admin") {
-    teamsWithScore = teamsWithScore.sort((a, b) => {
-      if (b.weightedScore === null) return -1; // null di akhir
-      if (a.weightedScore === null) return 1;
-      return b.weightedScore - a.weightedScore;
-    });
-  }
-
-  return {
-    data: teamsWithScore,
-    meta: {
-      page,
-      limit,
-      totalCount,
-      totalPages: Math.ceil(totalCount / limit),
-    },
+  const meta: GetAllTeamsMeta = {
+    page,
+    limit,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limit),
   };
+
+  return { data, meta };
 };
 
 export const getTeamById = async (leaderId: string) => {

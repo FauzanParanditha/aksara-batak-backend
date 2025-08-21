@@ -60,6 +60,7 @@ model User {
   teams                  Team[]                   @relation("LeaderTeams")
   PaymentVerificationLog PaymentVerificationLog[]
   scores                 Score[]                  @relation("JudgeScores")
+  JudgeScoreAggregate    JudgeScoreAggregate[]
 }
 
 model Registrar {
@@ -69,29 +70,35 @@ model Registrar {
 }
 
 model Team {
-  id             String            @id @default(cuid())
-  teamName       String            // e.g. hatobangon.id
+  id             String     @id @default(cuid())
+  teamName       String // e.g. hatobangon.id
   category       String
-  leader         User              @relation("LeaderTeams", fields: [leaderId], references: [id])
+  leader         User       @relation("LeaderTeams", fields: [leaderId], references: [id])
   leaderId       String
-  status         TeamStatus        @default(draft)
+  status         TeamStatus @default(draft)
   submissionLink String?
   qrCodeUrl      String?
   queueNumber    Int?
   photoUrl       String?
-  paymentStatus  String            @default("unpaid") // 'unpaid', 'pending', 'paid'
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  paymentStatus  String     @default("unpaid") // 'unpaid', 'pending', 'paid'
+  avgScore       Float?
+  judgeCount     Int?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   deletedAt      DateTime?
-  registrar      Registrar?        @relation(fields: [registrarId], references: [id])
+  registrar      Registrar? @relation(fields: [registrarId], references: [id])
   registrarId    String?
 
-  members        TeamMember[]
-  project        Project?
-  presentation   PresentationSlot?
-  scores         Score[]
-  payment        Payment?
-  UniqueCodePool UniqueCodePool[]
+  members             TeamMember[]
+  project             Project?
+  presentation        PresentationSlot?
+  scores              Score[]
+  payment             Payment?
+  UniqueCodePool      UniqueCodePool[]
+  JudgeScoreAggregate JudgeScoreAggregate[]
+
+  @@index([status])
+  @@index([avgScore])
 }
 
 model TeamMember {
@@ -154,6 +161,8 @@ model Score {
   criteria String
   score    Float
   comment  String?
+
+  @@unique([judgeId, teamId, criteria], name: "judgeId_teamId_criteria")
 }
 
 model Email_Log {
@@ -209,4 +218,17 @@ model UniqueCodePool {
   team      Team?     @relation(fields: [teamId], references: [id])
   teamId    String?   @unique
   createdAt DateTime  @default(now())
+}
+
+model JudgeScoreAggregate {
+  id            String   @id @default(cuid())
+  team          Team     @relation(fields: [teamId], references: [id])
+  teamId        String
+  judge         User     @relation(fields: [judgeId], references: [id])
+  judgeId       String
+  weightedScore Float
+  updatedAt     DateTime @updatedAt
+
+  @@unique([teamId, judgeId])
+  @@index([teamId, weightedScore])
 }
